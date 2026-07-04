@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "chunk.h"
 #include "memory.h"
@@ -26,12 +27,85 @@ void writeChunk(Chunk* chunk, uint8_t byte, int line) {
 		chunk->code = GROW_ARRAY(uint8_t, chunk->code, oldCapacity, chunk->capacity);
 	}
 
-	chunk->code[chunk->count] = byte;
-	writeLineArray(&chunk->lines, line);
+	chunk->code[chunk->count] = byte;	
 	chunk->count++;
+	writeLineArray(&chunk->lines, line);
 }
 
-int addConstant(Chunk* chunk, Value value) {
-	writeValueArray(&chunk->constants, value);
-	return chunk->constants.count - 1;
+/*void print_binary(unsigned int n) {
+    // Starts from the Most Significant Bit (MSB)
+    for (int i = (sizeof(n) * 8) - 1; i >= 0; i--) {
+        printf("%d", (n >> i) & 1);
+    }
+    printf("\n");
+}*/
+
+void writeConstant(Chunk* chunk, Value value, int line) {
+  if (chunk->capacity < chunk->count + 1) {
+    int oldCapacity = chunk->capacity;
+    chunk->capacity = GROW_CAPACITY(oldCapacity);
+    chunk->code =
+        GROW_ARRAY(uint8_t, chunk->code, oldCapacity, chunk->capacity);
+  }
+
+  // opcode write
+  uint8_t byteOverflow = 0;
+  if (chunk->constants.count >= 65536) {
+    chunk->code[chunk->count] = OP_CONSTANT_LONGEST;
+    chunk->count++;
+    byteOverflow = OP_CONSTANT_LONGEST;
+  } else if (chunk->constants.count >= 256) {
+    chunk->code[chunk->count] = OP_CONSTANT_LONG;
+    chunk->count++;
+    byteOverflow = OP_CONSTANT_LONG;
+  } else {
+    chunk->code[chunk->count] = OP_CONSTANT;
+    chunk->count++;
+  }
+  writeLineArray(&chunk->lines, line);
+
+  // const val write
+  // little endian in case of overflow
+  if (byteOverflow == 0) {
+    writeValueArray(&chunk->constants, value);
+    chunk->code[chunk->count] = chunk->constants.count - 1;
+    chunk->count++;
+    writeLineArray(&chunk->lines, line);
+  } else {
+    writeValueArray(&chunk->constants, value);
+    uint32_t number = chunk->constants.count - 1;
+    uint32_t firstByte = 255;
+    uint32_t secondByte = 65280;
+    uint32_t thirdByte = 16711680;
+
+    if (byteOverflow == OP_CONSTANT_LONG) {
+      uint8_t lsb = number & firstByte;          // least significant byte
+      uint8_t msb = (number & secondByte) >> 8;  // most significant byte
+
+      chunk->code[chunk->count] = lsb;
+      chunk->count++;
+      writeLineArray(&chunk->lines, line);
+
+      chunk->code[chunk->count] = msb;
+      chunk->count++;
+      writeLineArray(&chunk->lines, line);
+    } else {
+      uint8_t lsb = number & firstByte;  // least significant byte
+      uint8_t midsb = (number & secondByte) >> 8;
+      uint8_t msb = (number & thirdByte) >> 16;  // most significant byte
+
+      chunk->code[chunk->count] = lsb;
+      chunk->count++;
+      writeLineArray(&chunk->lines, line);
+
+      chunk->code[chunk->count] = midsb;
+      chunk->count++;
+      writeLineArray(&chunk->lines, line);
+
+      chunk->code[chunk->count] = msb;
+      chunk->count++;
+      writeLineArray(&chunk->lines, line);
+    }
+  }
 }
+

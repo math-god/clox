@@ -8,17 +8,14 @@ int main(int argc, char const *argv[])
 	Chunk chunk;
 	initChunk(&chunk);
 
-	int constant1 = addConstant(&chunk, 1.2);
-	writeChunk(&chunk, OP_CONSTANT, 1);
-	writeChunk(&chunk, constant1, 1);
-
+	for (int i = 0; i < 65600; ++i)
+	{
+		writeConstant(&chunk, i + 10 + i, 1);
+	}
+	writeConstant(&chunk, 1.2, 1);
 	writeChunk(&chunk, OP_RETURN, 1);
 
-
-	int constant2 = addConstant(&chunk, 1.9);
-	writeChunk(&chunk, OP_CONSTANT, 2);
-	writeChunk(&chunk, constant2, 2);
-
+	writeConstant(&chunk, 1.9, 2);
 	writeChunk(&chunk, OP_RETURN, 2);
 
 	printIntArray(chunk.lines.lines, chunk.lines.count);
