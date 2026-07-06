@@ -1,35 +1,34 @@
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "chunk.h"
 #include "memory.h"
 
 void initChunk(Chunk* chunk) {
-	chunk->count = 0;
-	chunk->capacity = 0;
-	chunk->code = NULL;
-	initLineArray(&chunk->lines);
-	initValueArray(&chunk->constants);
+    chunk->count = 0;
+    chunk->capacity = 0;
+    chunk->code = NULL;
+    initLineArray(&chunk->lines);
+    initValueArray(&chunk->constants);
 }
 
 void freeChunk(Chunk* chunk) {
-	FREE_ARRAY(uint8_t, chunk->code, chunk->capacity);
-	freeLineArray(&chunk->lines);
-	freeValueArray(&chunk->constants);
-	initChunk(chunk);
+    FREE_ARRAY(uint8_t, chunk->code, chunk->capacity);
+    freeLineArray(&chunk->lines);
+    freeValueArray(&chunk->constants);
+    initChunk(chunk);
 }
 
 void writeChunk(Chunk* chunk, uint8_t byte, int line) {
-	if (chunk->capacity < chunk->count + 1)
-	{
-		int oldCapacity = chunk->capacity;
-		chunk->capacity = GROW_CAPACITY(oldCapacity);
-		chunk->code = GROW_ARRAY(uint8_t, chunk->code, oldCapacity, chunk->capacity);
-	}
+    if (chunk->capacity < chunk->count + 1) {
+        int oldCapacity = chunk->capacity;
+        chunk->capacity = GROW_CAPACITY(oldCapacity);
+        chunk->code = GROW_ARRAY(uint8_t, chunk->code, oldCapacity, chunk->capacity);
+    }
 
-	chunk->code[chunk->count] = byte;	
-	chunk->count++;
-	writeLineArray(&chunk->lines, line);
+    chunk->code[chunk->count] = byte;
+    chunk->count++;
+    writeLineArray(&chunk->lines, line, 1);
 }
 
 /*void print_binary(unsigned int n) {
@@ -41,71 +40,46 @@ void writeChunk(Chunk* chunk, uint8_t byte, int line) {
 }*/
 
 void writeConstant(Chunk* chunk, Value value, int line) {
-  if (chunk->capacity < chunk->count + 1) {
-    int oldCapacity = chunk->capacity;
-    chunk->capacity = GROW_CAPACITY(oldCapacity);
-    chunk->code =
-        GROW_ARRAY(uint8_t, chunk->code, oldCapacity, chunk->capacity);
-  }
-
-  // opcode write
-  uint8_t byteOverflow = 0;
-  if (chunk->constants.count >= 65536) {
-    chunk->code[chunk->count] = OP_CONSTANT_LONGEST;
-    chunk->count++;
-    byteOverflow = OP_CONSTANT_LONGEST;
-  } else if (chunk->constants.count >= 256) {
-    chunk->code[chunk->count] = OP_CONSTANT_LONG;
-    chunk->count++;
-    byteOverflow = OP_CONSTANT_LONG;
-  } else {
-    chunk->code[chunk->count] = OP_CONSTANT;
-    chunk->count++;
-  }
-  writeLineArray(&chunk->lines, line);
-
-  // const val write
-  // little endian in case of overflow
-  if (byteOverflow == 0) {
-    writeValueArray(&chunk->constants, value);
-    chunk->code[chunk->count] = chunk->constants.count - 1;
-    chunk->count++;
-    writeLineArray(&chunk->lines, line);
-  } else {
-    writeValueArray(&chunk->constants, value);
-    uint32_t number = chunk->constants.count - 1;
-    uint32_t firstByte = 255;
-    uint32_t secondByte = 65280;
-    uint32_t thirdByte = 16711680;
-
-    if (byteOverflow == OP_CONSTANT_LONG) {
-      uint8_t lsb = number & firstByte;          // least significant byte
-      uint8_t msb = (number & secondByte) >> 8;  // most significant byte
-
-      chunk->code[chunk->count] = lsb;
-      chunk->count++;
-      writeLineArray(&chunk->lines, line);
-
-      chunk->code[chunk->count] = msb;
-      chunk->count++;
-      writeLineArray(&chunk->lines, line);
-    } else {
-      uint8_t lsb = number & firstByte;  // least significant byte
-      uint8_t midsb = (number & secondByte) >> 8;
-      uint8_t msb = (number & thirdByte) >> 16;  // most significant byte
-
-      chunk->code[chunk->count] = lsb;
-      chunk->count++;
-      writeLineArray(&chunk->lines, line);
-
-      chunk->code[chunk->count] = midsb;
-      chunk->count++;
-      writeLineArray(&chunk->lines, line);
-
-      chunk->code[chunk->count] = msb;
-      chunk->count++;
-      writeLineArray(&chunk->lines, line);
+    if (chunk->capacity < chunk->count + 1) {
+        int oldCapacity = chunk->capacity;
+        chunk->capacity = GROW_CAPACITY(oldCapacity);
+        chunk->code = GROW_ARRAY(uint8_t, chunk->code, oldCapacity, chunk->capacity);
     }
-  }
-}
 
+    // opcode write
+    uint8_t byteOverflow = 0;
+    if (chunk->constants.count >= 65536) {
+        chunk->code[chunk->count] = OP_CONSTANT_LONGEST;
+        chunk->count++;
+        byteOverflow = OP_CONSTANT_LONGEST;
+    } else if (chunk->constants.count >= 256) {
+        chunk->code[chunk->count] = OP_CONSTANT_LONG;
+        chunk->count++;
+        byteOverflow = OP_CONSTANT_LONG;
+    } else {
+        chunk->code[chunk->count] = OP_CONSTANT;
+        chunk->count++;
+    }
+    writeLineArray(&chunk->lines, line, 1);
+
+    // const val write
+    if (byteOverflow == 0) {
+        writeValueArray(&chunk->constants, value);
+        chunk->code[chunk->count] = chunk->constants.count - 1;
+        chunk->count++;
+        writeLineArray(&chunk->lines, line, 1);
+    } else {
+        writeValueArray(&chunk->constants, value);
+        uint32_t number = chunk->constants.count - 1;
+        uint32_t* ptr = (uint32_t*)&chunk->code[chunk->count];
+        *ptr = number;
+
+        if (byteOverflow == OP_CONSTANT_LONG) {
+            chunk->count += 2;
+            writeLineArray(&chunk->lines, line, 2);
+        } else {
+            chunk->count += 3;
+            writeLineArray(&chunk->lines, line, 3);
+        }
+    }
+}

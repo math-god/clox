@@ -23,10 +23,10 @@ static int constantInstruction(const char* name, Chunk* chunk, int offset, int c
 		constant = chunk->code[offset + 1];
 		offsetIncr = 2;
 	} else if (constSize == 2) {
-		constant = chunk->code[offset + 1] | (chunk->code[offset + 2] << 8);
+		constant = chunk->code[offset + 1] | chunk->code[offset + 2] << 8;
 		offsetIncr = 3;
 	} else if (constSize == 3) {
-		constant = chunk->code[offset + 1] | (chunk->code[offset + 2] << 8) | (chunk->code[offset + 3] << 16);
+		constant = chunk->code[offset + 1] | chunk->code[offset + 2] << 8 | chunk->code[offset + 3] << 16;
 		offsetIncr = 4;
 	}
 

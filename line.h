@@ -10,7 +10,7 @@ typedef struct {
 } LineArray;
 
 void initLineArray(LineArray* array);
-void writeLineArray(LineArray* array, int line);
+void writeLineArray(LineArray* array, int line, int bytesCount);
 void freeLineArray(LineArray* array);
 int getLine(LineArray* array, int instrOffset);
 
