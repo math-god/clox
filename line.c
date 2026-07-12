@@ -13,7 +13,7 @@ void writeLineArray(LineArray* array, int line, int bytesCount) {
     if (array->capacity < array->count + 1) {
         int oldCapacity = array->capacity;
         array->capacity = GROW_CAPACITY(oldCapacity);
-        array->lines = GROW_ARRAY(int, array->lines, oldCapacity, array->capacity);
+        array->lines = RESIZE_ARRAY(int, array->lines, oldCapacity, array->capacity);
     }
 
     // init

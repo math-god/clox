@@ -2,23 +2,49 @@
 
 #include "common.h"
 #include "debug.h"
+#include "memory.h"
 #include "vm.h"
 
 VM vm;
 
-static void resetStack() { vm.stackTop = vm.stack; }
+static void resetStack() {
+    vm.stackCount = 0;
+    vm.stackCapacity = STACK_INIT_CAPACITY;
+    vm.stackBottom = RESIZE_ARRAY(Value, vm.stackBottom, 0, STACK_INIT_CAPACITY);
+    vm.stackTop = vm.stackBottom;
+    vm.stackGrowCount = 0;
+}
 
 void initVM() { resetStack(); }
 
 void freeVM() {}
 
 void push(Value value) {
+    if (vm.stackCapacity < vm.stackCount + 1) {
+        int oldCapacity = vm.stackCapacity;
+        vm.stackCapacity = GROW_CAPACITY(vm.stackCapacity);
+        vm.stackBottom = RESIZE_ARRAY(Value, vm.stackBottom, oldCapacity, vm.stackCapacity);
+        vm.stackTop = &vm.stackBottom[oldCapacity];
+        vm.stackGrowCount++;
+    }
+
     *vm.stackTop = value;
     vm.stackTop++;
+    vm.stackCount++;
 }
 
 Value pop() {
+    if (vm.stackGrowCount > 0 &&
+        (vm.stackCount < (vm.stackCapacity >> 1) - STACK_SHRINK_THRESHOLD(vm.stackGrowCount))) {
+        int oldCapacity = vm.stackCapacity;
+        vm.stackCapacity = vm.stackCapacity >> 1;
+        vm.stackBottom = RESIZE_ARRAY(Value, vm.stackBottom, oldCapacity, vm.stackCapacity);
+        vm.stackTop = vm.stackBottom + vm.stackCount;
+        vm.stackGrowCount--;
+    }
+
     vm.stackTop--;
+    vm.stackCount--;
     return *vm.stackTop;
 }
 
@@ -38,12 +64,14 @@ static InterpretResult run() {
     for (;;) {
 #ifdef DEBUG_TRACE_EXECUTION
         printf("        ");
-        for (Value* slot = vm.stack; slot < vm.stackTop; slot++) {
+        for (Value* slot = vm.stackBottom; slot < vm.stackTop; slot++) {
             printf("|[");
             printValue(*slot);
             printf("]");
         }
         printf("\n");
+#endif
+#ifdef DEBUG_INSTRUCTIONS
         disassembleInstruction(vm.chunk, (int)(vm.ip - vm.chunk->code));
 #endif
 
