@@ -54,11 +54,11 @@ static InterpretResult run() {
     (vm.chunk->constants.values[size == 1   ? READ_BYTE()                    \
                                 : size == 2 ? READ_BYTE() | READ_BYTE() << 8 \
                                             : READ_BYTE() | READ_BYTE() << 8 | READ_BYTE() << 16])
-#define BINARY_OP(op)     \
-    do {                  \
-        double b = pop(); \
-        double a = pop(); \
-        push(a op b);     \
+    
+#define BINARY_OP(op)                                 \
+    do {                                              \
+        double b = pop();                             \
+        *(vm.stackTop - 1) = *(vm.stackTop - 1) op b; \
     } while (false);
 
     for (;;) {
@@ -83,7 +83,7 @@ static InterpretResult run() {
                 return INTERPRET_OK;
             }
             case OP_NEGATE:
-                push(-pop());
+                *(vm.stackTop - 1) = -(*(vm.stackTop - 1));
                 break;
             case OP_ADD:
                 BINARY_OP(+);
