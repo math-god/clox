@@ -1,5 +1,6 @@
 #include <stdio.h>
-#include <time.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "chunk.h"
 #include "common.h"
@@ -7,61 +8,69 @@
 #include "line.h"
 #include "vm.h"
 
-// 0.0001 -      push(-pop());
-// 0.00004 -  *(vm.stackTop - 1) = -(*(vm.stackTop - 1));
-// 2.5 diff
+static void repl() {
+    char line[1024];
+    for (;;) {
+        printf("> ");
 
-// 0.000128 - old add
-// 0.000093 - new add
-// 1.4 diff
-
-// 0.000129 - old sub
-// 0.000091 - new sub
-// 1.4 diff
-
-// 0.000130 - old mul
-// 0.000094 - new mul
-// 1.4 diff
-
-// 0.000157 - old div
-// 0.000115 - new div
-// 1.4 diff
-
-int main(int argc, char const *argv[]) {
-    int size = 10000;
-
-    float arr[size];
-
-    for (int j = 0; j < size; ++j) {
-        initVM();
-
-        Chunk chunk;
-        initChunk(&chunk);
-
-        for (int i = 0; i < 10000; ++i) {
-            writeConstant(&chunk, 100, 1);
+        if (!fgets(line, sizeof(line), stdin)) {
+            printf("\n");
+            break;
         }
 
-        for (int i = 0; i < 9999; ++i) {
-            writeChunk(&chunk, OP_DIVIDE, 2);
-        }
-        writeChunk(&chunk, OP_RETURN, 10);
+        interpret(line);
+    }
+}
 
-        clock_t start = clock();
-        interpret(&chunk);
-        clock_t end = clock();
-
-        freeChunk(&chunk);
-        freeVM();
-  
-        arr[j] = (float)(end - start) / CLOCKS_PER_SEC;
+static char* readFile(const char* path) {
+    FILE* file = fopen(path, "rb");
+    if (file == NULL) {
+        fprintf(stderr, "Could not open file \"%s\".\n", path);
+        exit(74);
     }
 
-    float sum = 0;
-    for (int j = 0; j < size; ++j) {
-        sum += arr[j];
+    fseek(file, 0L, SEEK_END);
+    size_t fileSize = ftell(file);
+    rewind(file);
+
+    char* buffer = (char*)malloc(fileSize + 1);
+    if (buffer == NULL) {
+        fprintf(stderr, "Not enough memory to read \"%s\".\n", path);
+        exit(74);
     }
-    printf("AVG TIME: %f\n", sum / size);
+
+    size_t bytesRead = fread(buffer, sizeof(char), fileSize, file);
+    if (bytesRead < fileSize) {
+        fprintf(stderr, "Could not read file \"%s\".\n", path);
+        exit(74);
+    }
+    buffer[bytesRead] = '\0';
+
+    fclose(file);
+    return buffer;
+}
+
+static void runFile(const char* path) {
+    char* source = readFile(path);
+    InterpretResult result = interpret(source);
+    free(source);
+
+    if (result == INTERPRET_COMPILE_ERROR) exit(65);
+    if (result == INTERPRET_RUNTIME_ERROR) exit(70);
+}
+
+int main(int argc, char const* argv[]) {
+    initVM();
+
+    if (argc == 1) {
+        repl();
+    } else if (argc == 2) {
+        runFile(argv[1]);
+    } else {
+        fprintf(stderr, "Usage: clox [path]\n");
+        exit(64);
+    }
+    freeVM();
 
     return 0;
 }
