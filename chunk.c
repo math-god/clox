@@ -41,7 +41,7 @@ void writeChunk(Chunk* chunk, uint8_t byte, int line) {
 }
 
 // write up to 4 bytes (opcode + const)
-void writeConstant(Chunk* chunk, Value value, int line) {
+int writeConstant(Chunk* chunk, Value value, int line) {
     uint8_t desiredMemory = 1; 
     if (chunk->constants.count >= 65536) {
         desiredMemory += 3;
@@ -84,4 +84,6 @@ void writeConstant(Chunk* chunk, Value value, int line) {
             writeLineArray(&chunk->lines, line, 3);
         }
     }
+
+    return chunk->constants.count;
 }
