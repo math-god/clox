@@ -9,6 +9,11 @@
 #include "debug.h"
 #endif
 
+#ifdef DEBUG_PARSER
+// ordering: parsePrecedence,number,grouping,unary,binary
+int parserFuncCalls[5] = {0};
+#endif
+
 typedef struct {
     Token current;
     Token previous;
@@ -114,6 +119,11 @@ static ParseRule* getRule(TokenType type);
 static void parsePrecedence(Precedence precedence);
 
 static void binary() {
+#ifdef DEBUG_PARSER
+    int callNum = ++parserFuncCalls[4];
+    printf("binary() call #%d\n", callNum);
+#endif
+
     TokenType operatorType = parser.previous.type;
     ParseRule* rule = getRule(operatorType);
     parsePrecedence((Precedence)(rule->precedence + 1));
@@ -134,19 +144,41 @@ static void binary() {
         default:
             return;  // Unreachable
     }
+
+#ifdef DEBUG_PARSER
+    printf("binary() return #%d\n", callNum);
+#endif
 }
 
 static void grouping() {
+#ifdef DEBUG_PARSER
+     int callNum = ++parserFuncCalls[2];
+    printf("grouping() call #%d\n", callNum);
+#endif
+
     expression();
     consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
+
+#ifdef DEBUG_PARSER
+    printf("grouping() return #%d\n", callNum);
+#endif
 }
 
 static void number() {
+#ifdef DEBUG_PARSER
+    printf("number() call #%d\n", ++parserFuncCalls[1]);
+#endif
+
     double value = strtod(parser.previous.start, NULL);
     emitConstant(value);
 }
 
 static void unary() {
+#ifdef DEBUG_PARSER
+     int callNum = ++parserFuncCalls[3];
+    printf("unary() call #%d\n", callNum);
+#endif
+
     TokenType operatorType = parser.previous.type;
 
     parsePrecedence(PREC_UNARY);
@@ -158,6 +190,10 @@ static void unary() {
         default:
             return;  // Unreachable
     }
+
+#ifdef DEBUG_PARSER
+    printf("unary() return #%d\n", callNum);
+#endif
 }
 
 ParseRule rules[] = {
@@ -204,6 +240,11 @@ ParseRule rules[] = {
 };
 
 static void parsePrecedence(Precedence precedence) {
+#ifdef DEBUG_PARSER
+    int callNum = ++parserFuncCalls[0];
+    printf("parsePrecedence(%d) call #%d\n", precedence, callNum);
+#endif
+
     advance();
     ParseFn prefixRule = getRule(parser.previous.type)->prefix;
     if (prefixRule == NULL) {
@@ -217,6 +258,10 @@ static void parsePrecedence(Precedence precedence) {
         ParseFn infixRule = getRule(parser.previous.type)->infix;
         infixRule();
     }
+
+#ifdef DEBUG_PARSER
+    printf("parsePrecedence(%d) return #%d\n", precedence, callNum);
+#endif
 }
 
 static ParseRule* getRule(TokenType type) { return &rules[type]; }
@@ -236,3 +281,5 @@ bool compile(const char* source, Chunk* chunk) {
     endCompiler();
     return !parser.hadError;
 }
+
+// (-1 + 2) * 3 - -4

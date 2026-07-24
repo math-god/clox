@@ -7,6 +7,7 @@
 
 //#define DEBUG_TRACE_EXECUTION
 //#define DEBUG_INSTRUCTIONS
-#define DEBUG_PRINT_CODE
+//#define DEBUG_PRINT_CODE
+#define DEBUG_PARSER
 
 #endif
