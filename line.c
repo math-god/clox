@@ -9,7 +9,11 @@ void initLineArray(LineArray* array) {
     array->count = 0;
 }
 
+int lastLineIndex = 0;
+
 void writeLineArray(LineArray* array, int line, int bytesCount) {
+    // if (clearLastLine) lastLineIndex = 0;
+
     if (array->capacity < array->count + 1) {
         int oldCapacity = array->capacity;
         array->capacity = GROW_CAPACITY(oldCapacity);
@@ -22,20 +26,17 @@ void writeLineArray(LineArray* array, int line, int bytesCount) {
         array->lines[1] = 0;
         array->count = array->count + 2;
         return;
-    } else {
+    } else if (line == array->lines[lastLineIndex]) {
         // incr
-        for (int i = 0; i < array->count; i = i + 2) {
-            if (line == array->lines[i]) {
-                array->lines[i + 1] = array->lines[i + 1] + bytesCount;
-                return;
-            }
-        }
-
-        // adding
-        array->lines[array->count] = line;
-        array->lines[array->count + 1] = array->lines[array->count - 1] + bytesCount;
-        array->count = array->count + 2;
+        array->lines[lastLineIndex + 1] = array->lines[lastLineIndex + 1] + bytesCount;
+        return;
     }
+
+    // adding
+    array->lines[array->count] = line;
+    array->lines[array->count + 1] = array->lines[array->count - 1] + bytesCount;
+    array->count = array->count + 2;
+    lastLineIndex += 2;
 }
 
 void freeLineArray(LineArray* array) {
