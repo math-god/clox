@@ -6,6 +6,7 @@
 
 #define STACK_INIT_CAPACITY 256
 #define STACK_SHRINK_THRESHOLD(growCount) (2 << 3 + growCount)
+#define STACK_LAST_VALUE (*(vm.stackTop - 1))
 
 typedef struct {
     Chunk* chunk;
