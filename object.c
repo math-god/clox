@@ -7,6 +7,7 @@
 #include "vm.h"
 
 #define ALLOCATE_OBJ(type, objectType) (type*)allocateObject(sizeof(type), objectType)
+#define ALLOCATE_STR(length) (ObjString*)allocateObject(sizeof(ObjString) + length, OBJ_STRING)
 
 static Obj* allocateObject(size_t size, ObjType type) {
     Obj* object = (Obj*)reallocate(NULL, 0, size);
@@ -17,10 +18,12 @@ static Obj* allocateObject(size_t size, ObjType type) {
     return object;
 }
 
-static ObjString* allocateString(char* chars, int length) {
-    ObjString* string = ALLOCATE_OBJ(ObjString, OBJ_STRING);
+ObjString* allocateString(const char* chars, int length) {
+    int terminatedLength = length + 1;
+    ObjString* string = ALLOCATE_STR(terminatedLength);
     string->length = length;
-    string->chars = chars;
+    strncpy(string->chars, chars, terminatedLength);
+    string->chars[length] = '\0';
     return string;
 }
 
