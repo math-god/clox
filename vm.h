@@ -16,9 +16,12 @@ typedef struct {
     uint32_t stackCount;
     uint32_t stackCapacity;
     uint16_t stackGrowCount;
+    Obj* objects;
 } VM;
 
 typedef enum { INTERPRET_OK, INTERPRET_COMPILE_ERROR, INTERPRET_RUNTIME_ERROR } InterpretResult;
+
+extern VM vm;
 
 void initVM();
 void freeVM();

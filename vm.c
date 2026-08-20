@@ -1,10 +1,12 @@
 #include <stdarg.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "common.h"
 #include "compiler.h"
 #include "debug.h"
 #include "memory.h"
+#include "object.h"
 #include "vm.h"
 
 VM vm;
@@ -30,9 +32,14 @@ static void runtimeError(const char* format, ...) {
     resetStack();
 }
 
-void initVM() { resetStack(); }
+void initVM() {
+    resetStack();
+    vm.objects = NULL;
+}
 
-void freeVM() {}
+void freeVM() {
+    freeObjects();
+}
 
 void push(Value value) {
     if (vm.stackCapacity < vm.stackCount + 1) {
@@ -66,6 +73,19 @@ Value pop() {
 static Value peek(int distance) { return vm.stackTop[-1 - distance]; }
 
 static bool isFalsey(Value value) { return IS_NIL(value) || (IS_BOOL(value) && !AS_BOOL(value)); }
+
+static void concatenate() {
+    ObjString* popped = AS_STRING(pop());
+    ObjString* lastVal = AS_STRING(STACK_LAST_VALUE);
+
+    int length = lastVal->length + popped->length;
+    char* chars = ALLOCATE(char, length + 1);
+    memcpy(chars, lastVal->chars, lastVal->length);
+    memcpy(chars + lastVal->length, popped->chars, popped->length);
+    chars[length] = '\0';
+
+    STACK_LAST_VALUE = OBJ_VAL(takeString(chars, length));
+}
 
 static InterpretResult run() {
 #define READ_BYTE() (*vm.ip++)
@@ -112,7 +132,19 @@ static InterpretResult run() {
                 }
                 STACK_LAST_VALUE = NUMBER_VAL(-AS_NUMBER(STACK_LAST_VALUE));
                 break;
-            case OP_ADD:
+            case OP_ADD: {
+                if (IS_STRING(peek(0)) && IS_STRING(peek(1))) {
+                    concatenate();
+                } else if (IS_NUMBER(peek(0)) && IS_NUMBER(peek(1))) {
+                    Value popped = pop();
+                    STACK_LAST_VALUE = NUMBER_VAL(AS_NUMBER(STACK_LAST_VALUE) + AS_NUMBER(popped));
+                } else {
+                    runtimeError("Operands must be two numbers or two strings.");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+
+                break;
+            }
                 BINARY_OP(NUMBER_VAL, +);
                 break;
             case OP_SUBSTRACT:
