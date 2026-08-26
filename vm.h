@@ -3,6 +3,7 @@
 
 #include "chunk.h"
 #include "value.h"
+#include "table.h"
 
 #define STACK_INIT_CAPACITY 256
 #define STACK_SHRINK_THRESHOLD(growCount) (2 << 3 + growCount)
@@ -17,6 +18,7 @@ typedef struct {
     uint32_t stackCapacity;
     uint16_t stackGrowCount;
     Obj* objects;
+    Table strings;
 } VM;
 
 typedef enum { INTERPRET_OK, INTERPRET_COMPILE_ERROR, INTERPRET_RUNTIME_ERROR } InterpretResult;
