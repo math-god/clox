@@ -86,7 +86,7 @@ static void concatenate() {
     memcpy(chars + lastVal->length, popped->chars, popped->length);
     chars[length] = '\0';
 
-    STACK_LAST_VALUE = OBJ_VAL(takeString(chars, length));
+    STACK_LAST_VALUE = takeString(chars, length);
 }
 
 static InterpretResult run() {

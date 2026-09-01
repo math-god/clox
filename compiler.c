@@ -222,7 +222,7 @@ static void string() {
     printf("string() call #%d\n", ++parserFuncCalls[6]);
 #endif
 
-    emitConstant(OBJ_VAL(allocateString(parser.previous.start + 1, parser.previous.length - 2)));
+    emitConstant(allocateString(parser.previous.start + 1, parser.previous.length - 2));
 }
 
 static void unary() {
