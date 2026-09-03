@@ -91,19 +91,23 @@ static void concatenate() {
 
 static InterpretResult run() {
 #define READ_BYTE() (*vm.ip++)
-#define READ_CONSTANT(size)                                                  \
-    (vm.chunk->constants.values[size == 1   ? READ_BYTE()                    \
-                                : size == 2 ? READ_BYTE() | READ_BYTE() << 8 \
-                                            : READ_BYTE() | READ_BYTE() << 8 | READ_BYTE() << 16])
+#define PUSH_CONSTANT(size)                                            \
+    do {                                                               \
+        uint32_t index = 0;                                            \
+        for (int offset = 0; offset <= 1 << (size + 1); offset += 8) { \
+            index |= READ_BYTE() << offset;                            \
+        }                                                              \
+        push(vm.chunk->constants.values[index]);                       \
+    } while (false);
 
-#define BINARY_OP(valueType, op)                                                        \
-    do {                                                                                \
-        if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {                               \
-            runtimeError("Operands must be numbers.");                                  \
-            return INTERPRET_RUNTIME_ERROR;                                             \
-        }                                                                               \
-        Value popped = pop();                                                           \
-        STACK_LAST_VALUE = valueType(AS_NUMBER(STACK_LAST_VALUE) op AS_NUMBER(popped)); \
+#define BINARY_OP(valueType, op)                                                          \
+    do {                                                                                  \
+        if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {                                 \
+            runtimeError("Operands must be numbers.");                                    \
+            return INTERPRET_RUNTIME_ERROR;                                               \
+        }                                                                                 \
+        Value popped = pop();                                                             \
+        STACK_LAST_VALUE = valueType((AS_NUMBER(STACK_LAST_VALUE) op AS_NUMBER(popped))); \
     } while (false);
 
     for (;;) {
@@ -158,21 +162,15 @@ static InterpretResult run() {
             case OP_DIVIDE:
                 BINARY_OP(NUMBER_VAL, /);
                 break;
-            case OP_CONSTANT: {
-                Value constant = READ_CONSTANT(1);
-                push(constant);
+            case OP_CONSTANT:
+                PUSH_CONSTANT(1);
                 break;
-            }
-            case OP_CONSTANT_LONG: {
-                Value constant = READ_CONSTANT(2);
-                push(constant);
+            case OP_CONSTANT_LONG:
+                PUSH_CONSTANT(2);
                 break;
-            }
-            case OP_CONSTANT_LONGEST: {
-                Value constant = READ_CONSTANT(3);
-                push(constant);
+            case OP_CONSTANT_LONGEST:
+                PUSH_CONSTANT(3);
                 break;
-            }
             case OP_NIL:
                 push(NIL_VAL);
                 break;
@@ -200,7 +198,7 @@ static InterpretResult run() {
     }
 
 #undef READ_BYTE
-#undef READ_CONSTANT
+#undef PUSH_CONSTANT
 #undef BINARY_OP
 }
 
