@@ -19,10 +19,10 @@ static Obj* allocateObject(size_t size, ObjType type) {
     return object;
 }
 
-static Value wrap(ObjString* string, uint32_t hash, bool intern) {
+static Value wrap(ObjString* string, uint32_t hash, bool new) {
     Value key = OBJ_VAL(string);
     key.hash = hash;
-    if (intern) tableSet(&vm.strings, &key, NIL_VAL);
+    if (new) tableSet(&vm.strings, &key, NIL_VAL);
     return key;
 }
 

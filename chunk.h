@@ -22,6 +22,18 @@ typedef enum {
 	OP_MULTIPLY,
 	OP_DIVIDE,
 	OP_RETURN,
+	OP_PRINT,
+	OP_POP,
+	OP_SET_GLOBAL,
+	OP_SET_GLOBAL_LONG,
+	OP_SET_GLOBAL_LONGEST,
+	OP_GET_GLOBAL,
+	OP_GET_GLOBAL_LONG,
+	OP_GET_GLOBAL_LONGEST,
+	OP_DEFINE_GLOBAL,
+	OP_DEFINE_GLOBAL_LONG,
+	OP_DEFINE_GLOBAL_LONGEST,
+
 } OpCode;
 
 typedef struct {
@@ -35,6 +47,7 @@ typedef struct {
 void initChunk(Chunk* chunk);
 void freeChunk(Chunk* chunk);
 void writeChunk(Chunk* chunk, uint8_t byte, int line);
+void writeInstruction(Chunk* chunk, uint8_t instruction, uint8_t bytes[], int length, int line);
 int writeConstant(Chunk* chunk, Value value, int line);
 
 #endif

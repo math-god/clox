@@ -40,9 +40,33 @@ void writeChunk(Chunk* chunk, uint8_t byte, int line) {
     writeLineArray(&chunk->lines, line, 1);
 }
 
+void writeInstruction(Chunk* chunk, uint8_t opCode, uint8_t bytes[], int length, int line) {
+    if (chunk->capacity < chunk->count + length + 1) {
+        int oldCapacity = chunk->capacity;
+        chunk->capacity = GROW_CAPACITY(oldCapacity);
+        chunk->code = RESIZE_ARRAY(uint8_t, chunk->code, oldCapacity, chunk->capacity);
+    }
+
+    // opcode write
+    chunk->code[chunk->count] = opCode;
+    chunk->count++;
+    writeLineArray(&chunk->lines, line, 1);
+
+    if (length < 1) return;
+
+    // arg write
+    for (int i = 0; i < length; i++) {
+        chunk->code[chunk->count] = bytes[i];
+        chunk->count++;
+    }
+
+    writeLineArray(&chunk->lines, line, length);
+}
+
 // write up to 4 bytes (opcode + const)
+// returns constant index
 int writeConstant(Chunk* chunk, Value value, int line) {
-    uint8_t desiredMemory = 1; 
+    uint8_t desiredMemory = 1;
     if (chunk->constants.count >= 65536) {
         desiredMemory += 3;
     } else if (chunk->constants.count >= 256) {
@@ -85,5 +109,5 @@ int writeConstant(Chunk* chunk, Value value, int line) {
         }
     }
 
-    return chunk->constants.count;
+    return chunk->constants.count - 1;
 }

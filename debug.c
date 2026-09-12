@@ -26,8 +26,7 @@ static int constantInstruction(const char* name, Chunk* chunk, int offset, int c
         constant = chunk->code[offset + 1] | chunk->code[offset + 2] << 8;
         offsetIncr = 3;
     } else if (constSize == 3) {
-        constant =
-            chunk->code[offset + 1] | chunk->code[offset + 2] << 8 | chunk->code[offset + 3] << 16;
+        constant = chunk->code[offset + 1] | chunk->code[offset + 2] << 8 | chunk->code[offset + 3] << 16;
         offsetIncr = 4;
     }
 
@@ -46,6 +45,26 @@ int disassembleInstruction(Chunk* chunk, int offset) {
     }
     uint8_t instruction = chunk->code[offset];
     switch (instruction) {
+        case OP_SET_GLOBAL:
+            return constantInstruction("OP_SET_GLOBAL", chunk, offset, 1);
+        case OP_SET_GLOBAL_LONG:
+            return constantInstruction("OP_SET_GLOBAL_LONG", chunk, offset, 2);
+        case OP_SET_GLOBAL_LONGEST:
+            return constantInstruction("OP_SET_GLOBAL_LONGEST", chunk, offset, 3);
+        case OP_GET_GLOBAL:
+            return constantInstruction("OP_GET_GLOBAL", chunk, offset, 1);
+        case OP_GET_GLOBAL_LONG:
+            return constantInstruction("OP_GET_GLOBAL_LONG", chunk, offset, 2);
+        case OP_GET_GLOBAL_LONGEST:
+            return constantInstruction("OP_GET_GLOBAL_LONGEST", chunk, offset, 3);
+        case OP_DEFINE_GLOBAL:
+            return constantInstruction("OP_DEFINE_GLOBAL", chunk, offset, 1);
+        case OP_DEFINE_GLOBAL_LONG:
+            return constantInstruction("OP_DEFINE_GLOBAL_LONG", chunk, offset, 2);
+        case OP_DEFINE_GLOBAL_LONGEST:
+            return constantInstruction("OP_DEFINE_GLOBAL_LONGEST", chunk, offset, 3);
+        case OP_PRINT:
+            return simpleInstruction("OP_PRINT", offset);
         case OP_RETURN:
             return simpleInstruction("OP_RETURN", offset);
         case OP_NEGATE:
@@ -78,6 +97,8 @@ int disassembleInstruction(Chunk* chunk, int offset) {
             return simpleInstruction("OP_GREATER", offset);
         case OP_LESS:
             return simpleInstruction("OP_LESS", offset);
+        case OP_POP:
+            return simpleInstruction("OP_POP", offset);
         default:
             printf("Unknown opcode %d\n", instruction);
             return offset + 1;

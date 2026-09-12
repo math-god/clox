@@ -18,6 +18,7 @@ typedef struct {
     uint32_t stackCapacity;
     uint16_t stackGrowCount;
     Obj* objects;
+    Table globals;
     Table strings;
 } VM;
 

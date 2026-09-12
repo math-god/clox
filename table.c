@@ -80,7 +80,7 @@ bool tableSet(Table* table, Value* key, Value value) {
 
     Entry* entry = findEntry(table->entries, table->capacity, key);
     bool isNewKey = entry->key == NULL;
-    Value* storageKey;
+    Value* storageKey = entry->key;
     if (isNewKey && IS_NIL(entry->value)) {
         table->count++;
         storageKey = writeValueArray(&table->keyStorage, *key);

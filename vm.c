@@ -36,11 +36,13 @@ void initVM() {
     resetStack();
     vm.objects = NULL;
     initTable(&vm.strings);
+    initTable(&vm.globals);
 }
 
 void freeVM() {
     freeObjects();
     freeTable(&vm.strings);
+    freeTable(&vm.globals);
 }
 
 void push(Value value) {
@@ -89,17 +91,20 @@ static void concatenate() {
     STACK_LAST_VALUE = takeString(chars, length);
 }
 
-static InterpretResult run() {
-#define READ_BYTE() (*vm.ip++)
-#define PUSH_CONSTANT(size)                                            \
-    do {                                                               \
-        uint32_t index = 0;                                            \
-        for (int offset = 0; offset <= 1 << (size + 1); offset += 8) { \
-            index |= READ_BYTE() << offset;                            \
-        }                                                              \
-        push(vm.chunk->constants.values[index]);                       \
-    } while (false);
+static uint8_t readByte() { return *vm.ip++; }
 
+// constant array index
+static uint32_t readConstantIndex(int size) {
+    uint32_t index = 0;
+    for (int offset = 0; offset <= 1 << (size + 1); offset += 8) {
+        index |= readByte() << offset;
+    }
+
+    return index;
+}
+
+static InterpretResult run() {
+#define PUSH_CONSTANT(size) push(vm.chunk->constants.values[readConstantIndex(size)]);
 #define BINARY_OP(valueType, op)                                                          \
     do {                                                                                  \
         if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {                                 \
@@ -109,6 +114,7 @@ static InterpretResult run() {
         Value popped = pop();                                                             \
         STACK_LAST_VALUE = valueType((AS_NUMBER(STACK_LAST_VALUE) op AS_NUMBER(popped))); \
     } while (false);
+#define READ_STRING(size) AS_STRING(vm.chunk->constants.values[readConstantIndex(size)])
 
     for (;;) {
 #ifdef DEBUG_TRACE_EXECUTION
@@ -125,10 +131,13 @@ static InterpretResult run() {
 #endif
 
         uint8_t instruction;
-        switch (instruction = READ_BYTE()) {
-            case OP_RETURN: {
+        switch (instruction = readByte()) {
+            case OP_PRINT: {
                 printValue(pop());
                 printf("\n");
+                break;
+            }
+            case OP_RETURN: {
                 return INTERPRET_OK;
             }
             case OP_NEGATE:
@@ -194,12 +203,58 @@ static InterpretResult run() {
             case OP_LESS:
                 BINARY_OP(BOOL_VAL, <);
                 break;
+            case OP_POP:
+                pop();
+                break;
+            case OP_SET_GLOBAL:
+            case OP_SET_GLOBAL_LONG:
+            case OP_SET_GLOBAL_LONGEST: {
+                ObjString* name = READ_STRING(instruction == OP_SET_GLOBAL        ? 1
+                                              : instruction == OP_SET_GLOBAL_LONG ? 2
+                                                                                  : 3);
+                Value* key = &OBJ_VAL(name);
+                key->hash = hashString(name->chars, name->length);
+                if (tableSet(&vm.globals, key, peek(0))) {
+                    tableDelete(&vm.globals, key);
+                    runtimeError("Undefined variable '%s'.", name->chars);
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                break;
+            }
+            case OP_GET_GLOBAL:
+            case OP_GET_GLOBAL_LONG:
+            case OP_GET_GLOBAL_LONGEST: {
+                ObjString* name = READ_STRING(instruction == OP_GET_GLOBAL        ? 1
+                                              : instruction == OP_GET_GLOBAL_LONG ? 2
+                                                                                  : 3);
+                Value* key = &OBJ_VAL(name);
+                key->hash = hashString(name->chars, name->length);
+                Value val;  // out param
+                if (!tableGet(&vm.globals, key, &val)) {
+                    runtimeError("Undefined variable '%s'.", name->chars);
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                STACK_LAST_VALUE = val;
+                break;
+            }
+            case OP_DEFINE_GLOBAL:
+            case OP_DEFINE_GLOBAL_LONG:
+            case OP_DEFINE_GLOBAL_LONGEST: {
+                ObjString* name = READ_STRING(instruction == OP_DEFINE_GLOBAL        ? 1
+                                              : instruction == OP_DEFINE_GLOBAL_LONG ? 2
+                                                                                     : 3);
+                Value* key = &OBJ_VAL(name);
+                key->hash = hashString(name->chars, name->length);
+                tableSet(&vm.globals, key, peek(0));
+                pop();
+                break;
+            }
         }
     }
 
-#undef READ_BYTE
 #undef PUSH_CONSTANT
 #undef BINARY_OP
+#undef READ_STRING
 }
 
 InterpretResult interpret(const char* source) {
