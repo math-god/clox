@@ -16,16 +16,16 @@ static int simpleInstruction(const char* name, int offset) {
     return offset + 1;
 }
 
-static int constantInstruction(const char* name, Chunk* chunk, int offset, int constSize) {
+static int constantInstruction(const char* name, Chunk* chunk, int offset) {
     uint32_t constant = 0;
     int offsetIncr = 0;
-    if (constSize == 1) {
+    if (chunk->constantMode == 1) {
         constant = chunk->code[offset + 1];
         offsetIncr = 2;
-    } else if (constSize == 2) {
+    } else if (chunk->constantMode == 2) {
         constant = chunk->code[offset + 1] | chunk->code[offset + 2] << 8;
         offsetIncr = 3;
-    } else if (constSize == 3) {
+    } else if (chunk->constantMode == 3) {
         constant = chunk->code[offset + 1] | chunk->code[offset + 2] << 8 | chunk->code[offset + 3] << 16;
         offsetIncr = 4;
     }
@@ -46,23 +46,11 @@ int disassembleInstruction(Chunk* chunk, int offset) {
     uint8_t instruction = chunk->code[offset];
     switch (instruction) {
         case OP_SET_GLOBAL:
-            return constantInstruction("OP_SET_GLOBAL", chunk, offset, 1);
-        case OP_SET_GLOBAL_LONG:
-            return constantInstruction("OP_SET_GLOBAL_LONG", chunk, offset, 2);
-        case OP_SET_GLOBAL_LONGEST:
-            return constantInstruction("OP_SET_GLOBAL_LONGEST", chunk, offset, 3);
+            return constantInstruction("OP_SET_GLOBAL", chunk, offset);
         case OP_GET_GLOBAL:
-            return constantInstruction("OP_GET_GLOBAL", chunk, offset, 1);
-        case OP_GET_GLOBAL_LONG:
-            return constantInstruction("OP_GET_GLOBAL_LONG", chunk, offset, 2);
-        case OP_GET_GLOBAL_LONGEST:
-            return constantInstruction("OP_GET_GLOBAL_LONGEST", chunk, offset, 3);
+            return constantInstruction("OP_GET_GLOBAL", chunk, offset);
         case OP_DEFINE_GLOBAL:
-            return constantInstruction("OP_DEFINE_GLOBAL", chunk, offset, 1);
-        case OP_DEFINE_GLOBAL_LONG:
-            return constantInstruction("OP_DEFINE_GLOBAL_LONG", chunk, offset, 2);
-        case OP_DEFINE_GLOBAL_LONGEST:
-            return constantInstruction("OP_DEFINE_GLOBAL_LONGEST", chunk, offset, 3);
+            return constantInstruction("OP_DEFINE_GLOBAL", chunk, offset);
         case OP_PRINT:
             return simpleInstruction("OP_PRINT", offset);
         case OP_RETURN:
@@ -78,11 +66,7 @@ int disassembleInstruction(Chunk* chunk, int offset) {
         case OP_DIVIDE:
             return simpleInstruction("OP_DIVIDE", offset);
         case OP_CONSTANT:
-            return constantInstruction("OP_CONSTANT", chunk, offset, 1);
-        case OP_CONSTANT_LONG:
-            return constantInstruction("OP_CONSTANT_LONG", chunk, offset, 2);
-        case OP_CONSTANT_LONGEST:
-            return constantInstruction("OP_CONSTANT_LONGEST", chunk, offset, 3);
+            return constantInstruction("OP_CONSTANT", chunk, offset);
         case OP_NIL:
             return simpleInstruction("OP_NIL", offset);
         case OP_TRUE:
@@ -99,6 +83,10 @@ int disassembleInstruction(Chunk* chunk, int offset) {
             return simpleInstruction("OP_LESS", offset);
         case OP_POP:
             return simpleInstruction("OP_POP", offset);
+        case OP_SWITCH_TO_16:
+            return simpleInstruction("OP_SWITCH_TO_16", offset);
+        case OP_SWITCH_TO_24:
+            return simpleInstruction("OP_SWITCH_TO_24", offset);
         default:
             printf("Unknown opcode %d\n", instruction);
             return offset + 1;

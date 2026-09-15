@@ -7,8 +7,6 @@
 
 typedef enum {
 	OP_CONSTANT,
-	OP_CONSTANT_LONG,
-	OP_CONSTANT_LONGEST,
 	OP_NEGATE,
 	OP_NIL,
 	OP_TRUE,
@@ -25,14 +23,10 @@ typedef enum {
 	OP_PRINT,
 	OP_POP,
 	OP_SET_GLOBAL,
-	OP_SET_GLOBAL_LONG,
-	OP_SET_GLOBAL_LONGEST,
 	OP_GET_GLOBAL,
-	OP_GET_GLOBAL_LONG,
-	OP_GET_GLOBAL_LONGEST,
 	OP_DEFINE_GLOBAL,
-	OP_DEFINE_GLOBAL_LONG,
-	OP_DEFINE_GLOBAL_LONGEST,
+	OP_SWITCH_TO_16,
+	OP_SWITCH_TO_24,
 
 } OpCode;
 
@@ -42,6 +36,7 @@ typedef struct {
 	uint8_t* code;
 	LineArray lines;
 	ValueArray constants;
+	int constantMode; // bytes
 } Chunk;
 
 void initChunk(Chunk* chunk);

@@ -94,9 +94,9 @@ static void concatenate() {
 static uint8_t readByte() { return *vm.ip++; }
 
 // constant array index
-static uint32_t readConstantIndex(int size) {
+static uint32_t readConstantIndex() {
     uint32_t index = 0;
-    for (int offset = 0; offset <= 1 << (size + 1); offset += 8) {
+    for (int offset = 0; offset <= 1 << (vm.chunk->constantMode + 1); offset += 8) {
         index |= readByte() << offset;
     }
 
@@ -104,7 +104,7 @@ static uint32_t readConstantIndex(int size) {
 }
 
 static InterpretResult run() {
-#define PUSH_CONSTANT(size) push(vm.chunk->constants.values[readConstantIndex(size)]);
+#define PUSH_CONSTANT() push(vm.chunk->constants.values[readConstantIndex()]);
 #define BINARY_OP(valueType, op)                                                          \
     do {                                                                                  \
         if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {                                 \
@@ -114,7 +114,7 @@ static InterpretResult run() {
         Value popped = pop();                                                             \
         STACK_LAST_VALUE = valueType((AS_NUMBER(STACK_LAST_VALUE) op AS_NUMBER(popped))); \
     } while (false);
-#define READ_STRING(size) AS_STRING(vm.chunk->constants.values[readConstantIndex(size)])
+#define READ_STRING() AS_STRING(vm.chunk->constants.values[readConstantIndex()])
 
     for (;;) {
 #ifdef DEBUG_TRACE_EXECUTION
@@ -172,13 +172,7 @@ static InterpretResult run() {
                 BINARY_OP(NUMBER_VAL, /);
                 break;
             case OP_CONSTANT:
-                PUSH_CONSTANT(1);
-                break;
-            case OP_CONSTANT_LONG:
-                PUSH_CONSTANT(2);
-                break;
-            case OP_CONSTANT_LONGEST:
-                PUSH_CONSTANT(3);
+                PUSH_CONSTANT();
                 break;
             case OP_NIL:
                 push(NIL_VAL);
@@ -206,12 +200,8 @@ static InterpretResult run() {
             case OP_POP:
                 pop();
                 break;
-            case OP_SET_GLOBAL:
-            case OP_SET_GLOBAL_LONG:
-            case OP_SET_GLOBAL_LONGEST: {
-                ObjString* name = READ_STRING(instruction == OP_SET_GLOBAL        ? 1
-                                              : instruction == OP_SET_GLOBAL_LONG ? 2
-                                                                                  : 3);
+            case OP_SET_GLOBAL: {
+                ObjString* name = READ_STRING();
                 Value* key = &OBJ_VAL(name);
                 key->hash = hashString(name->chars, name->length);
                 if (tableSet(&vm.globals, key, peek(0))) {
@@ -221,12 +211,8 @@ static InterpretResult run() {
                 }
                 break;
             }
-            case OP_GET_GLOBAL:
-            case OP_GET_GLOBAL_LONG:
-            case OP_GET_GLOBAL_LONGEST: {
-                ObjString* name = READ_STRING(instruction == OP_GET_GLOBAL        ? 1
-                                              : instruction == OP_GET_GLOBAL_LONG ? 2
-                                                                                  : 3);
+            case OP_GET_GLOBAL: {
+                ObjString* name = READ_STRING();
                 Value* key = &OBJ_VAL(name);
                 key->hash = hashString(name->chars, name->length);
                 Value val;  // out param
@@ -237,16 +223,20 @@ static InterpretResult run() {
                 STACK_LAST_VALUE = val;
                 break;
             }
-            case OP_DEFINE_GLOBAL:
-            case OP_DEFINE_GLOBAL_LONG:
-            case OP_DEFINE_GLOBAL_LONGEST: {
-                ObjString* name = READ_STRING(instruction == OP_DEFINE_GLOBAL        ? 1
-                                              : instruction == OP_DEFINE_GLOBAL_LONG ? 2
-                                                                                     : 3);
+            case OP_DEFINE_GLOBAL: {
+                ObjString* name = READ_STRING();
                 Value* key = &OBJ_VAL(name);
                 key->hash = hashString(name->chars, name->length);
                 tableSet(&vm.globals, key, peek(0));
                 pop();
+                break;
+            }
+            case OP_SWITCH_TO_16: {
+                vm.chunk->constantMode = 2;
+                break;
+            }
+            case OP_SWITCH_TO_24: {
+                vm.chunk->constantMode = 3;
                 break;
             }
         }

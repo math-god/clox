@@ -15,28 +15,6 @@
 int parserFuncCalls[8] = {0};
 #endif
 
-typedef enum {
-    GET,
-    SET,
-    DEFINE,
-} VariableOp;
-
-static OpCode varGetOp[] = {OP_GET_GLOBAL, OP_GET_GLOBAL_LONG, OP_GET_GLOBAL_LONGEST};
-static OpCode varSetOp[] = {OP_SET_GLOBAL, OP_SET_GLOBAL_LONG, OP_SET_GLOBAL_LONGEST};
-static OpCode varDefineOp[] = {OP_DEFINE_GLOBAL, OP_DEFINE_GLOBAL_LONG, OP_DEFINE_GLOBAL_LONGEST};
-
-static OpCode getVarOp(int length, VariableOp op) {
-    switch (op) {
-        case GET:
-            return varGetOp[--length];
-        case SET:
-            return varSetOp[--length];
-        case DEFINE:
-            return varDefineOp[--length];
-        default: return -1; // Unreachable
-    }
-}
-
 typedef struct {
     Token current;
     Token previous;
@@ -271,7 +249,7 @@ static void namedVariable(Token name, bool canAssign) {
         bytes[i] = (uint8_t)arg << 8 * i;
     }
 
-    writeInstruction(currentChunk(), getVarOp(length, isAssignment ? SET : GET), bytes, length, parser.previous.line);
+    writeInstruction(currentChunk(), isAssignment ? OP_SET_GLOBAL : OP_GET_GLOBAL, bytes, length, parser.previous.line);
 }
 
 static void variable(bool canAssign) {
@@ -395,7 +373,7 @@ static void defineVariable(int global) {
         bytes[i] = (uint8_t)global << 8 * i;
     }
 
-    writeInstruction(currentChunk(), getVarOp(length, DEFINE), bytes, length, parser.previous.line);
+    writeInstruction(currentChunk(), OP_DEFINE_GLOBAL, bytes, length, parser.previous.line);
 }
 
 static ParseRule* getRule(TokenType type) { return &rules[type]; }

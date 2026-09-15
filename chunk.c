@@ -8,6 +8,7 @@ void initChunk(Chunk* chunk) {
     chunk->count = 0;
     chunk->capacity = 0;
     chunk->code = NULL;
+    chunk->constantMode = 1;
     initLineArray(&chunk->lines);
     initValueArray(&chunk->constants);
 }
@@ -27,6 +28,13 @@ void freeChunk(Chunk* chunk) {
     printf("\n");
 }*/
 
+#define WRITE_OP(op, line)                      \
+    do {                                        \
+        chunk->code[chunk->count] = op;         \
+        chunk->count++;                         \
+        writeLineArray(&chunk->lines, line, 1); \
+    } while (false);
+
 // write 1 byte
 void writeChunk(Chunk* chunk, uint8_t byte, int line) {
     if (chunk->capacity < chunk->count + 1) {
@@ -35,9 +43,7 @@ void writeChunk(Chunk* chunk, uint8_t byte, int line) {
         chunk->code = RESIZE_ARRAY(uint8_t, chunk->code, oldCapacity, chunk->capacity);
     }
 
-    chunk->code[chunk->count] = byte;
-    chunk->count++;
-    writeLineArray(&chunk->lines, line, 1);
+    WRITE_OP(byte, line);
 }
 
 void writeInstruction(Chunk* chunk, uint8_t opCode, uint8_t bytes[], int length, int line) {
@@ -47,11 +53,7 @@ void writeInstruction(Chunk* chunk, uint8_t opCode, uint8_t bytes[], int length,
         chunk->code = RESIZE_ARRAY(uint8_t, chunk->code, oldCapacity, chunk->capacity);
     }
 
-    // opcode write
-    chunk->code[chunk->count] = opCode;
-    chunk->count++;
-    writeLineArray(&chunk->lines, line, 1);
-
+    WRITE_OP(opCode, line);
     if (length < 1) return;
 
     // arg write
@@ -69,8 +71,10 @@ int writeConstant(Chunk* chunk, Value value, int line) {
     uint8_t desiredMemory = 1;
     if (chunk->constants.count >= 65536) {
         desiredMemory += 3;
+        if (chunk->constantMode == 2) WRITE_OP(OP_SWITCH_TO_24, line);
     } else if (chunk->constants.count >= 256) {
         desiredMemory += 2;
+        if (chunk->constantMode == 1) WRITE_OP(OP_SWITCH_TO_16, line);
     } else {
         desiredMemory += 1;
     }
@@ -81,12 +85,7 @@ int writeConstant(Chunk* chunk, Value value, int line) {
         chunk->code = RESIZE_ARRAY(uint8_t, chunk->code, oldCapacity, chunk->capacity);
     }
 
-    // opcode write
-    chunk->code[chunk->count] = desiredMemory == 2   ? OP_CONSTANT
-                                : desiredMemory == 3 ? OP_CONSTANT_LONG
-                                                     : OP_CONSTANT_LONGEST;
-    chunk->count++;
-    writeLineArray(&chunk->lines, line, 1);
+    WRITE_OP(OP_CONSTANT, line);
 
     // const val write
     if (desiredMemory == 2) {
