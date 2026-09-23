@@ -223,11 +223,21 @@ static InterpretResult run() {
                 STACK_LAST_VALUE = val;
                 break;
             }
+            case OP_GET_LOCAL: {
+                uint8_t slot = readByte();
+                push(*(vm.stackBottom + slot));
+                break;
+            }
+            case OP_SET_LOCAL: {
+                uint8_t slot = readByte();
+                *(vm.stackBottom + slot) = peek(0);
+                break;
+            }
             case OP_DEFINE_GLOBAL: {
                 ObjString* name = READ_STRING();
                 Value* key = &OBJ_VAL(name);
                 key->hash = hashString(name->chars, name->length);
-                tableSet(&vm.globals, key, peek(0));
+                tableSet(&vm.globals, key, pop());
                 pop();
                 break;
             }
