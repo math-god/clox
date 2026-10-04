@@ -92,7 +92,6 @@ static void concatenate() {
 }
 
 static uint8_t readByte() { return *vm.ip++; }
-
 // constant array index
 static uint32_t readConstantIndex() {
     uint32_t index = 0;
@@ -104,6 +103,7 @@ static uint32_t readConstantIndex() {
 }
 
 static InterpretResult run() {
+#define READ_SHORT() (vm.ip += 2, (uint16_t)((vm.ip[-2] << 8) | vm.ip[-1]))
 #define PUSH_CONSTANT() push(vm.chunk->constants.values[readConstantIndex()]);
 #define BINARY_OP(valueType, op)                                                          \
     do {                                                                                  \
@@ -249,12 +249,28 @@ static InterpretResult run() {
                 vm.chunk->constantMode = 3;
                 break;
             }
+            case OP_JUMP_IF_FALSE: {
+                uint16_t offset = READ_SHORT();
+                if (isFalsey(peek(0))) vm.ip += offset;
+                break;
+            }
+            case OP_JUMP: {
+                uint16_t offset = READ_SHORT();
+                vm.ip += offset;
+                break;
+            }
+            case OP_LOOP: {
+                uint16_t offset = READ_SHORT();
+                vm.ip -= offset;
+                break;
+            }
         }
     }
 
 #undef PUSH_CONSTANT
 #undef BINARY_OP
 #undef READ_STRING
+#undef READ_SHORT
 }
 
 InterpretResult interpret(const char* source) {

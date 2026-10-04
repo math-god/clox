@@ -29,6 +29,10 @@ typedef enum {
 	OP_DEFINE_GLOBAL,
 	OP_SWITCH_TO_16,
 	OP_SWITCH_TO_24,
+	OP_JUMP_IF_FALSE,
+	OP_JUMP,
+	OP_LOOP,
+	
 
 } OpCode;
 
