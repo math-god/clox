@@ -4,14 +4,22 @@
 #include "chunk.h"
 #include "value.h"
 #include "table.h"
+#include "object.h"
 
 #define STACK_INIT_CAPACITY 256
 #define STACK_SHRINK_THRESHOLD(growCount) (2 << (3 + growCount))
 #define STACK_LAST_VALUE (*(vm.stackTop - 1))
+#define FRAMES_MAX 64
 
 typedef struct {
-    Chunk* chunk;
+    ObjFunction* function;
     uint8_t* ip;
+    Value* slots;
+} CallFrame;
+
+typedef struct {
+    CallFrame frames[FRAMES_MAX];
+    int frameCount;
     Value* stackBottom;
     Value* stackTop;
     uint32_t stackCount;
