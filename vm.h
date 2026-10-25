@@ -12,7 +12,7 @@
 #define FRAMES_MAX 64
 
 typedef struct {
-    ObjFunction* function;
+    ObjClosure* closure;
     uint8_t* ip;
     Value* slots;
 } CallFrame;
@@ -28,6 +28,7 @@ typedef struct {
     Obj* objects;
     Table globals;
     Table strings;
+    ObjUpvalue* openUpvalues;
 } VM;
 
 typedef enum { INTERPRET_OK, INTERPRET_COMPILE_ERROR, INTERPRET_RUNTIME_ERROR } InterpretResult;

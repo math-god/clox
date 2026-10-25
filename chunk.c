@@ -69,9 +69,15 @@ void writeInstruction(Chunk* chunk, uint8_t opCode, uint8_t bytes[], int length,
   writeLineArray(&chunk->lines, line, length);
 }
 
-// write up to 4 bytes (opcode + const)
+int writeConstant(Chunk* chunk, Value value) {
+  writeValueArray(&chunk->constants, value);
+  return chunk->constants.count - 1;
+}
+
+// writes in constant table and emits stack push instruction
+// writes up to 4 bytes (opcode + const)
 // returns constant index
-int writeConstant(Chunk* chunk, Value value, int line) {
+int pushConstant(Chunk* chunk, Value value, int line) {
   uint8_t desiredMemory = 1;
   if (chunk->constants.count >= 65536) {
     desiredMemory += 3;

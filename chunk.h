@@ -33,7 +33,10 @@ typedef enum {
 	OP_JUMP,
 	OP_LOOP,
 	OP_CALL,
-	
+	OP_CLOSURE,
+	OP_GET_UPVALUE,
+	OP_SET_UPVALUE,
+	OP_CLOSE_UPVALUE,
 
 } OpCode;
 
@@ -50,6 +53,7 @@ void initChunk(Chunk* chunk);
 void freeChunk(Chunk* chunk);
 void writeChunk(Chunk* chunk, uint8_t byte, int line);
 void writeInstruction(Chunk* chunk, uint8_t instruction, uint8_t bytes[], int length, int line);
-int writeConstant(Chunk* chunk, Value value, int line);
+int writeConstant(Chunk* chunk, Value value);
+int pushConstant(Chunk* chunk, Value value, int line);
 
 #endif
